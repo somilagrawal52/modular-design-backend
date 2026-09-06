@@ -12,7 +12,8 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173', // Vite default port
   'http://localhost:3000', 
-  'http://192.168.1.9:3000', // Next.js / React default port
+  'http://192.168.1.9:3000',
+  'https://modular-design-flax.vercel.app', // Next.js / React default port
   process.env.FRONTEND_URL, // Production frontend domain
 ].filter((origin): origin is string => Boolean(origin));
 
