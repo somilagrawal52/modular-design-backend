@@ -78,21 +78,21 @@ const allowedProjectTypes = [
 ];
 
 const allowedUnitValues = [
-  "1 unit",
-  "2–5 units",
-  "6–10 units",
-  "11–25 units",
-  "26–50 units",
-  "50+ units",
-  "Not sure yet",
+  "1",
+  "2-5",
+  "6-10",
+  "11-25",
+  "26-50",
+  "50-plus",
+  "not-sure",
 ];
 
 const allowedTimelineValues = [
-  "Exploring / No fixed timeline",
-  "Within 3 months",
-  "3–6 months",
-  "6–12 months",
-  "12+ months",
+  "exploring",
+  "within-3-months",
+  "3-6-months",
+  "6-12-months",
+  "12-plus-months",
 ];
 
 const allowedContactMethods = ["Email", "Phone", "WhatsApp"];
