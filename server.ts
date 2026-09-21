@@ -158,7 +158,7 @@ const transporter = nodemailer.createTransport({
 app.get("/api/health", (_req: Request, res: Response) => {
   return res.status(200).json({
     ok: true,
-    service: "DVR contact API",
+    service: "RP Exotic Homes contact API",
     timestamp: new Date().toISOString(),
   });
 });
@@ -312,7 +312,7 @@ app.post("/api/contact", async (req: Request, res: Response) => {
     const safeProjectType = safeHeader(projectType);
 
     const emailSubject = safeHeader(
-      `New DVR Project Enquiry — ${safeProjectType} — ${safeName}`
+      `New RP Exotic Homes Project Enquiry — ${safeProjectType} — ${safeName}`
     );
 
     const submittedAt = new Date().toISOString();
@@ -322,8 +322,8 @@ app.post("/api/contact", async (req: Request, res: Response) => {
     ===================================================== */
 
     const textContent = `
-NEW DREAM VENTURES REALTY PROJECT ENQUIRY
-=========================================
+NEW RP EXOTIC HOMES PROJECT ENQUIRY
+===================================
 
 CUSTOMER DETAILS
 
@@ -366,7 +366,7 @@ Submitted:
 ${submittedAt}
 
 Source:
-Dream Ventures Realty Website
+RP Exotic Homes Website
     `.trim();
 
     /* =====================================================
@@ -419,7 +419,7 @@ Dream Ventures Realty Website
           margin-bottom:10px;
         "
       >
-        DREAM VENTURES REALTY
+        RP EXOTIC HOMES
       </div>
 
       <h1
@@ -688,7 +688,7 @@ Dream Ventures Realty Website
         <br />
 
         Source:
-        Dream Ventures Realty Website
+        RP Exotic Homes Website
 
       </div>
 
@@ -705,7 +705,7 @@ Dream Ventures Realty Website
     ===================================================== */
 
     await transporter.sendMail({
-      from: `"Dream Ventures Realty Website" <${gmailUser}>`,
+      from: `"RP Exotic Homes Website" <${gmailUser}>`,
 
       to: recipientEmail,
 
