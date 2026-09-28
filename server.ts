@@ -210,24 +210,52 @@ function displayValue(value: string): string {
 }
 
 /* =========================================================
-   NODEMAILER / GMAIL
+   EMAIL TRANSPORTER CONFIGURATION
 ========================================================= */
 
 const gmailUser = process.env.GMAIL_USER;
 const gmailPassword = process.env.GMAIL_APP_PASSWORD;
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
+const smtpHost = process.env.SMTP_HOST;
+const smtpPort = process.env.SMTP_PORT
+  ? parseInt(process.env.SMTP_PORT, 10)
+  : 465;
+const smtpSecure =
+  process.env.SMTP_SECURE !== undefined
+    ? process.env.SMTP_SECURE === "true"
+    : smtpPort === 465;
+const smtpUser = process.env.SMTP_USER || gmailUser;
+const smtpPass = process.env.SMTP_PASS || gmailPassword;
 
-  auth: {
-    user: gmailUser,
-    pass: gmailPassword,
-  },
+const createMailTransporter = () => {
+  if (smtpHost && smtpHost !== "smtp.gmail.com") {
+    return nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
+    });
+  }
 
-  connectionTimeout: 10_000,
-  greetingTimeout: 10_000,
-  socketTimeout: 20_000,
-});
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: gmailUser,
+      pass: gmailPassword,
+    },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
+  });
+};
+
+const transporter = createMailTransporter();
 
 /* =========================================================
    HEALTH ENDPOINT
@@ -367,12 +395,20 @@ app.post("/api/contact", async (req: Request, res: Response) => {
        Environment validation
     ----------------------------------------- */
 
+    const fromName =
+      process.env.CONTACT_FROM_NAME || "RP Exotic Homes Website";
+    const senderEmail =
+      process.env.CONTACT_FROM_EMAIL || smtpUser || gmailUser || "";
     const recipientEmail =
-      process.env.CONTACT_TO_EMAIL || gmailUser;
+      process.env.CONTACT_TO_EMAIL || senderEmail;
 
-    if (!gmailUser || !gmailPassword || !recipientEmail) {
+    const hasAuth = Boolean(
+      (gmailUser && gmailPassword) || (smtpUser && smtpPass)
+    );
+
+    if (!hasAuth || !recipientEmail) {
       console.error(
-        "Email configuration missing: check GMAIL_USER, GMAIL_APP_PASSWORD and CONTACT_TO_EMAIL."
+        "Email configuration missing: check GMAIL_USER, GMAIL_APP_PASSWORD or SMTP settings, and CONTACT_TO_EMAIL."
       );
 
       return res.status(500).json({
@@ -785,7 +821,7 @@ RP Exotic Homes Website
     ===================================================== */
 
     await transporter.sendMail({
-      from: `"RP Exotic Homes Website" <${gmailUser}>`,
+      from: `"${fromName}" <${senderEmail}>`,
 
       to: recipientEmail,
 
