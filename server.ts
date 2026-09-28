@@ -14,24 +14,46 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
   "http://192.168.1.9:3000",
   "https://modular-design-flax.vercel.app",
+  "https://www.rpexotichomes.com",
+  "https://rpexotichomes.com",
   process.env.FRONTEND_URL,
 ].filter((origin): origin is string => Boolean(origin));
+
+const isAllowedOrigin = (origin: string): boolean => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
+  if (
+    /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(
+      origin
+    )
+  )
+    return true;
+  if (/^https?:\/\/([a-z0-9-]+\.)*rpexotichomes\.com$/.test(origin)) return true;
+  if (/^https:\/\/([a-z0-9-]+)\.vercel\.app$/.test(origin)) return true;
+  return false;
+};
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow Postman/curl/server-to-server requests with no Origin
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || isAllowedOrigin(origin)) {
         return callback(null, true);
       }
 
       console.warn(`Blocked CORS origin: ${origin}`);
-      return callback(new Error("Blocked by CORS policy"));
+      return callback(null, false);
     },
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    credentials: true,
   })
 );
 
@@ -59,23 +81,79 @@ interface ContactRequestBody {
   projectTimeline?: string;
   preferredContactMethod?: string;
   brief?: string;
+  message?: string;
 
   // Honeypot
   website?: string;
 }
 
 /* =========================================================
-   ALLOWED VALUES
+   ALLOWED VALUES & NORMALIZATION
 ========================================================= */
+
+const projectTypeNormalizationMap: Record<string, string> = {
+  // Capsule
+  "modular space capsule": "Space Capsule",
+  "space capsule": "Space Capsule",
+  "capsule": "Space Capsule",
+  // Hospitality
+  "resort & hospitality enclave": "Hotel or Retreat",
+  "hotel or retreat": "Hotel or Retreat",
+  "modular hotel or retreat": "Hotel or Retreat",
+  "hospitality": "Hotel or Retreat",
+  // Private
+  "private estate retreat": "Private Project",
+  "private project": "Private Project",
+  "modular home": "Private Project",
+  "private": "Private Project",
+  // Commercial
+  "commercial & wellness space": "Commercial Space",
+  "commercial space": "Commercial Space",
+  "café, bar, or restaurant": "Commercial Space",
+  "cafe, bar, or restaurant": "Commercial Space",
+  "retail or pop-up": "Commercial Space",
+  // Workplace
+  "workplace": "Workplace",
+  "modular office": "Workplace",
+  "office": "Workplace",
+  // Community
+  "community amenity": "Community Amenity",
+  "masterplan community amenity": "Community Amenity",
+  "pool or outdoor amenity": "Community Amenity",
+  // Partnerships
+  "architectural partnership": "Architectural Partnership",
+  "partnership": "Architectural Partnership",
+};
 
 const allowedProjectTypes = [
   "Space Capsule",
+  "Modular Space Capsule",
   "Hotel or Retreat",
+  "Modular Hotel or Retreat",
+  "Resort & Hospitality Enclave",
   "Private Project",
+  "Modular Home",
+  "Private Estate Retreat",
   "Commercial Space",
+  "Commercial & Wellness Space",
   "Workplace",
+  "Modular Office",
   "Community Amenity",
+  "Masterplan Community Amenity",
+  "Architectural Partnership",
+  "Café, Bar, or Restaurant",
+  "Retail or Pop-Up",
+  "Pool or Outdoor Amenity",
 ];
+
+function normalizeProjectType(input: string): string {
+  const trimmed = input.trim();
+  const lower = trimmed.toLowerCase();
+  if (projectTypeNormalizationMap[lower]) {
+    return projectTypeNormalizationMap[lower];
+  }
+  return trimmed;
+}
 
 const allowedUnitValues = [
   "1",
@@ -195,7 +273,8 @@ app.post("/api/contact", async (req: Request, res: Response) => {
 
     const company = cleanText(body.company, 150);
 
-    const projectType = cleanText(body.projectType, 100);
+    const rawProjectType = cleanText(body.projectType, 100);
+    const projectType = normalizeProjectType(rawProjectType);
 
     const estimatedUnits = cleanText(body.estimatedUnits, 50);
 
@@ -206,7 +285,8 @@ app.post("/api/contact", async (req: Request, res: Response) => {
       30
     );
 
-    const brief = cleanText(body.brief, 5000);
+    const rawBrief = body.brief || body.message || "";
+    const brief = cleanText(rawBrief, 5000);
 
     /* -----------------------------------------
        Required fields
@@ -237,12 +317,12 @@ app.post("/api/contact", async (req: Request, res: Response) => {
 
     /* -----------------------------------------
        Project type validation
-
-       If your frontend uses slightly different
-       exact values, update this array accordingly.
     ----------------------------------------- */
 
-    if (!allowedProjectTypes.includes(projectType)) {
+    if (
+      !allowedProjectTypes.includes(rawProjectType) &&
+      !allowedProjectTypes.includes(projectType)
+    ) {
       return res.status(400).json({
         ok: false,
         success: false,
@@ -748,6 +828,19 @@ app.use((_req: Request, res: Response) => {
     message: "API route not found.",
   });
 });
+
+/* =========================================================
+   LOCAL SERVER LISTENER (WHEN NOT ON VERCEL SERVERLESS)
+========================================================= */
+
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(
+      `RP Exotic Homes Backend API running on http://localhost:${PORT}`
+    );
+  });
+}
 
 /* =========================================================
    EXPORT EXPRESS APP FOR VERCEL

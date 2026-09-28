@@ -4,6 +4,8 @@
   "main": "server.ts",
   "type": "module",
   "scripts": {
+    "start": "tsx server.ts",
+    "dev": "tsx watch server.ts",
     "build": "tsc --noEmit"
   },
   "dependencies": {
