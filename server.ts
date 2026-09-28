@@ -834,6 +834,11 @@ RP Exotic Homes Website
       text: textContent,
 
       html: htmlContent,
+
+      headers: {
+        "Auto-Submitted": "auto-generated",
+        "X-Auto-Response-Suppress": "All",
+      },
     });
 
     return res.status(200).json({
